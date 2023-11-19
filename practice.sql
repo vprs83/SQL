@@ -20,9 +20,7 @@ GROUP BY o.orderID
 HAVING PurchaseSum >= 10000;
 
 /*
-    Sales distributons by sales amounts 
-    (from the most profitable category in descending order) 
-    by product category
+    DESCRIPTION REQUIRED
 */
 SELECT c.CategoryName Categories, ROUND(SUM(od.Quantity * p.Price), 2) TotalSalesAmount
 FROM OrderDetails od
@@ -30,3 +28,16 @@ LEFT JOIN Products p ON od.ProductID = p.ProductID
 LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
 GROUP BY Categories
 ORDER BY TotalSalesAmount; 
+
+/*
+    Sales distributons by sales amounts 
+    (from the most profitable category in descending order) 
+    by product category
+*/
+SELECT c.CustomerName, COUNT(o.CustomerID) PurchasesMadeNTimes 
+FROM Customers c
+RIGHT JOIN Orders o ON c.CustomerID = o.CustomerID
+GROUP BY c.CustomerName
+ORDER BY PurchasesMadeNTimes DESC , c.CustomerName;
+
+
