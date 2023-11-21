@@ -43,7 +43,6 @@ ORDER BY PurchasesMadeNTimes DESC , c.CustomerName;
 /*
     Display the number of products in the database for each category
 */
-
 SELECT c.CategoryName, COUNT(*) AmountOfProduct
 FROM Products p
 JOIN Categories c ON p.CategoryID = c.CategoryID
