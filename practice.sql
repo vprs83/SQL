@@ -48,3 +48,63 @@ FROM Products p
 JOIN Categories c ON p.CategoryID = c.CategoryID
 GROUP BY p.CategoryID;
 
+/*
+     
+*/
+SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
+        EXTRACT(MONTH FROM o.OrderDate) month,
+        o.OrderID,
+        COUNT(*) PositionsPerOrder,
+        SUM(od.Quantity * p.Price) OrderPrice
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+JOIN Products p ON od.ProductID = p.ProductID
+GROUP BY EXTRACT(YEAR FROM o.OrderDate),
+         EXTRACT(MONTH FROM o.OrderDate),
+         o.OrderID;
+
+/*
+     
+*/
+SELECT year, month,
+       COUNT(*) NumberOfOrdersPerMonth,
+       ROUND(AVG(PositionsPerOrder), 1) AvgPositionQuantityPerOrder,
+       ROUND(AVG(OrderPrice), 2) AvgOrderPricePerMonth
+FROM (SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
+            EXTRACT(MONTH FROM o.OrderDate) month,
+            o.OrderID,
+            COUNT(*) PositionsPerOrder,
+            SUM(od.Quantity * p.Price) OrderPrice
+    FROM Orders o
+    JOIN OrderDetails od ON o.OrderID = od.OrderID
+    JOIN Products p ON od.ProductID = p.ProductID
+    GROUP BY EXTRACT(YEAR FROM o.OrderDate),
+             EXTRACT(MONTH FROM o.OrderDate),
+             o.OrderID) nq
+GROUP BY year, month;
+
+/*
+     
+*/
+SELECT  year,
+        ROUND(AVG(NumberOfOrdersPerMonth), 1) AvgNumberOfOrdersPerYear,
+        ROUND(AVG(AvgOrderPricePerMonth), 2) AvgOrderPricePerYear
+FROM (SELECT year, month,
+             COUNT(*) NumberOfOrdersPerMonth,
+             ROUND(AVG(PositionsPerOrder), 1) AvgPositionQuantityPerOrder,
+             ROUND(AVG(OrderPrice), 2) AvgOrderPricePerMonth
+      FROM (SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
+                    EXTRACT(MONTH FROM o.OrderDate) month,
+                    o.OrderID,
+                    COUNT(*) PositionsPerOrder,
+                    SUM(od.Quantity * p.Price) OrderPrice
+            FROM Orders o
+            JOIN OrderDetails od ON o.OrderID = od.OrderID
+            JOIN Products p ON od.ProductID = p.ProductID
+            GROUP BY EXTRACT(YEAR FROM o.OrderDate),
+                     EXTRACT(MONTH FROM o.OrderDate),
+                     o.OrderID
+            ) nq
+      GROUP BY year, month
+    ) nq2
+GROUP BY year;

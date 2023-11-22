@@ -79,4 +79,3 @@ SELECT * FROM
                             TO_CHAR(OrderDate, 'Month'))
 WHERE average_quantity>11;
 
-
