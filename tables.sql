@@ -32,6 +32,19 @@ INSERT INTO OrderDetails (OrderID, Quantity) VALUES (10555, 1);
 
 SELECT * FROM OrderDetails;
 
+/* 
+    COMMIT & ROLLBACK usage example 
+    An alternative session for clarity of processes can be called using SQL*Plus tool
+*/
+COMMIT;
+
+DELETE FROM OrderDetails;
+INSERT INTO OrderDetails (OrderID, Quantity) VALUES (10001, 999);
+INSERT INTO OrderDetails (OrderID, Quantity) VALUES (10666, 999);
+
+ROLLBACK;
+/* ROLLBACK */
+
 -- Number of contracts per year
 SELECT EXTRACT(YEAR FROM OrderDate) year_indicator, COUNT(*) orders_per_year
 FROM Orders
@@ -69,7 +82,7 @@ GROUP BY    EXTRACT(YEAR FROM o.OrderDate),
     Average quantity of goods per order per month, where quantity > 11
 */
 SELECT * FROM 
-                (SELECT  EXTRACT(YEAR FROM o.OrderDate) year_indicator,
+                (SELECT EXTRACT(YEAR FROM o.OrderDate) year_indicator,
                         TO_CHAR(OrderDate, 'Month') order_month,
                         COUNT(*) number_of_contracts,
                         ROUND(AVG(od.Quantity), 2) average_quantity

@@ -108,3 +108,25 @@ FROM (SELECT year, month,
       GROUP BY year, month
     ) nq2
 GROUP BY year;
+
+/*
+    
+*/
+SELECT  LastName, FirstName,
+        EXTRACT(YEAR FROM o.OrderDate) year,
+        EXTRACT(MONTH FROM o.OrderDate) month,
+        o.OrderId,
+        COUNT(*) PosInOrder, 
+        SUM(od.Quantity * p.Price) OrderPrice
+FROM Employees e
+JOIN Orders o ON e.EmployeeID = o.EmployeeID
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+JOIN Products p ON od.ProductID = p.ProductID
+GROUP BY e.EmployeeID, 
+         EXTRACT(YEAR FROM o.OrderDate),
+         EXTRACT(MONTH FROM o.OrderDate),
+         o.OrderId
+ORDER BY o.OrderDate, o.OrderID;
+
+
+
