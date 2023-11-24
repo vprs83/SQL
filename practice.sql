@@ -49,7 +49,12 @@ JOIN Categories c ON p.CategoryID = c.CategoryID
 GROUP BY p.CategoryID;
 
 /*
-     
+     Query to sort orders by
+        • years,
+        • months
+        • order number
+        • amount of positions in the order
+        • total price of the order
 */
 SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
         EXTRACT(MONTH FROM o.OrderDate) month,
@@ -64,7 +69,9 @@ GROUP BY EXTRACT(YEAR FROM o.OrderDate),
          o.OrderID;
 
 /*
-     
+    Query to 
+    • count the amount of orders per month
+    • calculate the average order price
 */
 SELECT year, month,
        COUNT(*) NumberOfOrdersPerMonth,
@@ -84,7 +91,9 @@ FROM (SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
 GROUP BY year, month;
 
 /*
-     
+    Query to
+    • calculate the average number of orders per month by year
+    • calculate the average order price
 */
 SELECT  year,
         ROUND(AVG(NumberOfOrdersPerMonth), 1) AvgNumberOfOrdersPerYear,
@@ -110,7 +119,12 @@ FROM (SELECT year, month,
 GROUP BY year;
 
 /*
-    
+    Query for employee summary table:
+    • first and last name of the employee,
+    • year and month of order execution,
+    • order number (order id),
+    • number of positions in the order
+    • order price
 */
 SELECT  LastName, FirstName,
         EXTRACT(YEAR FROM o.OrderDate) year,
