@@ -4,6 +4,19 @@ SET SERVEROUTPUT ON;
     Some SQL-queries for the database provided by https://www.w3schools.com/
 */
 
+/*
+    Display suppliers (supplier id, supplier name, total number of products
+    who have N or more products
+*/
+
+SELECT 	s.SupplierID,
+		s.SupplierName,
+        COUNT(s.SupplierID) AS "Total number of products"
+FROM Suppliers AS s
+INNER JOIN Products AS p ON s.SupplierID = p.SupplierID
+GROUP BY 	s.SupplierID, 
+			s.SupplierName
+HAVING COUNT(s.SupplierID) >= 4; -- N=4
 
 /*
     Display the names of customers and their order number
