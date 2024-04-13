@@ -6,8 +6,36 @@ CREATE TABLE customers(
     City            VARCHAR2(20),
     PostalCode      VARCHAR2(20),
     Country         VARCHAR2(20),
+    
     PRIMARY KEY(CustomerID)
 );
+
+/* Change column size */
+ALTER TABLE customers MODIFY (CustomerName  VARCHAR2(50));
+ALTER TABLE customers MODIFY (ContactName   VARCHAR2(50));
+ALTER TABLE customers MODIFY (Address       VARCHAR2(50));
+
+CREATE TABLE employees(
+    EmployeeID      NUMBER          NOT NULL,
+    FirstName       VARCHAR2(20)    NOT NULL,
+    LastName        VARCHAR2(20)    NOT NULL,
+    BirthDate       DATE            NOT NULL,
+    --Photo          BLOB,
+    --Notes          CLOB,
+    
+    PRIMARY KEY(EmployeeID)
+);
+
+CREATE TABLE shippers(
+    ShipperID       NUMBER          NOT NULL,
+    ShipperName     VARCHAR2(20)    NOT NULL,
+    Phone           NUMBER          NOT NULL,
+    
+    PRIMARY KEY(ShipperID)
+);
+
+ALTER TABLE shippers MODIFY (Phone          VARCHAR2(20));
+ALTER TABLE shippers MODIFY (ShipperName    VARCHAR2(50));
 
 CREATE TABLE orders(
     OrderID     NUMBER  NOT NULL,
@@ -19,7 +47,7 @@ CREATE TABLE orders(
     PRIMARY KEY(OrderID),
     
     FOREIGN KEY(CustomerID)
-        REFERENCES Customers(CustomerID)
+        REFERENCES customers(CustomerID)
         ON DELETE SET NULL,
         
     FOREIGN KEY(EmployeeID)
@@ -27,7 +55,7 @@ CREATE TABLE orders(
         
     FOREIGN KEY(ShipperID)
         REFERENCES shippers(ShipperID)
-)
+);
 
 CREATE TABLE orderDetails(
     OrderDetailID   NUMBER  NOT NULL,
@@ -38,13 +66,14 @@ CREATE TABLE orderDetails(
     PRIMARY KEY(OrderDetailID),
     
     FOREIGN KEY(OrderID)
-        REFERENCES order(order_id),
+        REFERENCES orders(OrderID),
     
     FOREIGN KEY(ProductID)
         REFERENCES products(ProductID)
 );
 
-CREATE TABLE products(
+------------------------------------------------------------------- +
+CREATE TABLE products(                      
     ProductID   NUMBER          NOT NULL,
     ProductName VARCHAR2(20)    NOT NULL,
     SupplierID  NUMBER          NOT NULL,
@@ -61,8 +90,10 @@ CREATE TABLE products(
         REFERENCES suppliers(SupplierID),
         
     FOREIGN KEY(CategoryID)
-        REFERENCES category(CategoryID)
+        REFERENCES categories(CategoryID)
 );
+
+ALTER TABLE products MODIFY (ProductName  VARCHAR2(50));
 
 CREATE TABLE suppliers(
     SupplierID      NUMBER          NOT NULL,
@@ -77,6 +108,11 @@ CREATE TABLE suppliers(
     PRIMARY KEY(SupplierID)    
 );
 
+ALTER TABLE suppliers MODIFY (Phone         VARCHAR2(20));
+ALTER TABLE suppliers MODIFY (SupplierName  VARCHAR2(50));
+ALTER TABLE suppliers MODIFY (ContactName   VARCHAR2(50));
+ALTER TABLE suppliers MODIFY (Address       VARCHAR2(50));
+
 CREATE TABLE categories(
     CategoryID      NUMBER          NOT NULL,
     CategoryName    VARCHAR2(20)    NOT NULL,
@@ -85,24 +121,15 @@ CREATE TABLE categories(
     PRIMARY KEY(CategoryID)
 );
 
-CREATE TABLE shipper(
-    ShipperID       NUMBER          NOT NULL,
-    ShipperName     VARCHAR2(20)    NOT NULL,
-    Phone           NUMBER          NOT NULL
-);
-
-CREATE TABLE employees(
-    EmployeeID      NUMBER          NOT NULL,
-    FirstName       VARCHAR2(20)    NOT NULL,
-    LastName        VARCHAR2(20)    NOT NULL,
-    BirthDate       DATE            NOT NULL --,
-    --Photo          BLOB
-    --Notes          CLOB
-);
         
-        
-        
-        
+DROP TABLE customers;
+DROP TABLE categories;
+DROP TABLE employees;
+DROP TABLE orderDetails;
+DROP TABLE orders;
+DROP TABLE products;
+DROP TABLE shipper;
+DROP TABLE suppliers;
         
         
         
