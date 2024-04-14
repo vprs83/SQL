@@ -33,7 +33,7 @@ LEFT JOIN Products p ON od.ProductID = p.ProductID
 GROUP BY    cs.CustomerName,
             o.orderID
 HAVING SUM(p.Price * od.Quantity) >= 10000
-ORDER BY o.orderID;
+ORDER BY    o.orderID;
 
 /*
     Display the names of customers and the number of purchases they made.
@@ -77,14 +77,14 @@ ORDER BY c.CategoryName;
     Display the number of products in the database for each category
     AND rounded total sales for each category
 */
-    SELECT  c.CategoryName, 
-            COUNT(DISTINCT p.ProductID) "Number of products",
-            ROUND(SUM(od.Quantity * p.Price), 0) "Total sales"  -- ROUND(..., 2)
-    FROM Products p
-    JOIN Categories c ON p.CategoryID = c.CategoryID
-    JOIN OrderDetails od ON p.ProductId = od.ProductID
-    GROUP BY c.CategoryName
-    ORDER BY c.CategoryName;
+SELECT  c.CategoryName, 
+        COUNT(DISTINCT p.ProductID) "Number of products",
+        ROUND(SUM(od.Quantity * p.Price), 0) "Total sales"  -- ROUND(..., 2)
+FROM Products p
+JOIN Categories c ON p.CategoryID = c.CategoryID
+JOIN OrderDetails od ON p.ProductId = od.ProductID
+GROUP BY c.CategoryName
+ORDER BY c.CategoryName;
 
 /*
      Query to sort orders by
@@ -112,26 +112,99 @@ ORDER BY year,
          o.OrderID;
 
 /*
-    Query to 
-    • count the amount of orders per month
-    • calculate the average order price
+    Query to display income by year
 */
-SELECT year, month,
-       COUNT(*) NumberOfOrdersPerMonth,
-       ROUND(AVG(PositionsPerOrder), 1) AvgPositionQuantityPerOrder,
-       ROUND(AVG(OrderPrice), 2) AvgOrderPricePerMonth
-FROM (SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
-            EXTRACT(MONTH FROM o.OrderDate) month,
-            o.OrderID,
-            COUNT(*) PositionsPerOrder,
-            SUM(od.Quantity * p.Price) OrderPrice
-    FROM Orders o
-    JOIN OrderDetails od ON o.OrderID = od.OrderID
-    JOIN Products p ON od.ProductID = p.ProductID
-    GROUP BY EXTRACT(YEAR FROM o.OrderDate),
-             EXTRACT(MONTH FROM o.OrderDate),
-             o.OrderID) nq
-GROUP BY year, month;
+SELECT  '19' || EXTRACT(YEAR FROM o.OrderDate) year,
+        SUM(od.Quantity * p.Price) "Income by year"
+FROM orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+JOIN Products p ON od.ProductID = p.ProductID
+GROUP BY EXTRACT(YEAR FROM o.OrderDate)
+ORDER BY year;
+
+/*
+    Query to display the N-th (e.g. second) most profitable year
+*/
+SELECT  year,
+        IncomeByYear,
+        rank
+FROM (
+        -- Query to display income by year and ranking window function DENSE_RANK 
+        SELECT  '19' || EXTRACT(YEAR FROM o.OrderDate) year,
+                SUM(od.Quantity * p.Price) IncomeByYear,
+                DENSE_RANK() OVER(ORDER BY SUM(od.Quantity * p.Price) DESC) AS rank
+        FROM orders o
+        JOIN OrderDetails od ON o.OrderID = od.OrderID
+        JOIN Products p ON od.ProductID = p.ProductID
+        GROUP BY EXTRACT(YEAR FROM o.OrderDate) 
+    ) sq
+WHERE rank = 2; -- N=2
+
+/*
+    Query to display: 
+    • year
+    • month,
+    • number of orders per month
+    • average number of positions per order
+    • average order price per month
+    • monthly income  
+*/
+SELECT  '19' || year "Year", 
+        month "Month",
+        COUNT(*) "Orders per month",
+        ROUND(AVG(PositionsPerOrder), 1) "Avg number of positions",
+        ROUND(AVG(OrderPrice), 2) "Avg order price",
+        SUM(OrderPrice) "Monthly income"
+FROM (
+        SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
+                EXTRACT(MONTH FROM o.OrderDate) month,
+                o.OrderID,
+                COUNT(*) PositionsPerOrder,
+                SUM(od.Quantity * p.Price) OrderPrice
+        FROM Orders o
+        JOIN OrderDetails od ON o.OrderID = od.OrderID
+        JOIN Products p ON od.ProductID = p.ProductID
+        GROUP BY EXTRACT(YEAR FROM o.OrderDate),
+                 EXTRACT(MONTH FROM o.OrderDate),
+                 o.OrderID
+    ) nq
+GROUP BY year, month
+ORDER BY year, month;
+
+--------------------------- Comprehensive query ---------------------------
+
+/*
+    Query to display: 
+    • year
+    • month,
+    • number of orders per month
+    • average number of positions per order
+    • average order price per month
+    • monthly income  
+*/
+SELECT  '19' || year "Year", 
+        month "Month",
+        COUNT(*) "Orders per month",
+        ROUND(AVG(PositionsPerOrder), 1) "Avg number of positions",
+        ROUND(AVG(OrderPrice), 2) "Avg order price",
+        SUM(OrderPrice) "Monthly income"
+FROM (
+        SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
+                EXTRACT(MONTH FROM o.OrderDate) month,
+                o.OrderID,
+                COUNT(*) PositionsPerOrder,
+                SUM(od.Quantity * p.Price) OrderPrice
+        FROM Orders o
+        JOIN OrderDetails od ON o.OrderID = od.OrderID
+        JOIN Products p ON od.ProductID = p.ProductID
+        GROUP BY EXTRACT(YEAR FROM o.OrderDate),
+                 EXTRACT(MONTH FROM o.OrderDate),
+                 o.OrderID
+    ) nq
+GROUP BY year, month
+ORDER BY year, month;
+
+---------------------------------------------------------------------------
 
 /*
     Query to
@@ -156,9 +229,9 @@ FROM (SELECT year, month,
             GROUP BY EXTRACT(YEAR FROM o.OrderDate),
                      EXTRACT(MONTH FROM o.OrderDate),
                      o.OrderID
-            ) nq
+            ) sq
       GROUP BY year, month
-    ) nq2
+    ) sq2
 GROUP BY year;
 
 /*
