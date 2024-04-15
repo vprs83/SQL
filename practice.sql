@@ -168,43 +168,39 @@ FROM (
                  EXTRACT(MONTH FROM o.OrderDate),
                  o.OrderID
     ) nq
-GROUP BY year, month
-ORDER BY year, month;
+GROUP BY    year, 
+            month
+ORDER BY    year,
+            month;
 
---------------------------- Comprehensive query ---------------------------
+--------------------------- PowerBI sample data query ---------------------------
 
 /*
     Query to display: 
-    • year
+    • order id
+    • year, yyyy
     • month,
-    • number of orders per month
-    • average number of positions per order
-    • average order price per month
-    • monthly income  
+    • quantity of product
+    • price of product
+    • sum = quantity * price
+    • category name
+    • month name
 */
-SELECT  '19' || year "Year", 
-        month "Month",
-        COUNT(*) "Orders per month",
-        ROUND(AVG(PositionsPerOrder), 1) "Avg number of positions",
-        ROUND(AVG(OrderPrice), 2) "Avg order price",
-        SUM(OrderPrice) "Monthly income"
-FROM (
-        SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
-                EXTRACT(MONTH FROM o.OrderDate) month,
-                o.OrderID,
-                COUNT(*) PositionsPerOrder,
-                SUM(od.Quantity * p.Price) OrderPrice
-        FROM Orders o
-        JOIN OrderDetails od ON o.OrderID = od.OrderID
-        JOIN Products p ON od.ProductID = p.ProductID
-        GROUP BY EXTRACT(YEAR FROM o.OrderDate),
-                 EXTRACT(MONTH FROM o.OrderDate),
-                 o.OrderID
-    ) nq
-GROUP BY year, month
-ORDER BY year, month;
 
----------------------------------------------------------------------------
+SELECT  o.OrderID,
+        '19' || EXTRACT(YEAR FROM o.OrderDate) year,
+        EXTRACT(MONTH FROM o.OrderDate) month,
+        od.Quantity,
+        p.Price,
+        od.Quantity * p.Price sum,
+        c.CategoryName,
+        TO_CHAR(TO_DATE(EXTRACT(MONTH FROM o.OrderDate), 'MM'), 'MONTH') AS monthname
+FROM Orders o
+JOIN OrderDetails od ON o.OrderID = od.OrderID
+JOIN Products p ON od.ProductID = p.ProductID
+JOIN Categories c ON p.CategoryID = c.CategoryID;
+
+---------------------------------------------------------------------------------
 
 /*
     Query to
