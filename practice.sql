@@ -95,7 +95,7 @@ ORDER BY c.CategoryName;
         • product quantity (e.g. if 2 positions: 1 position = 5 items, 2 position = 10 items. Product quantity = 15 items)
         • total price of the order
 */
-SELECT  '19' || EXTRACT(YEAR FROM o.OrderDate) year,
+SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
         EXTRACT(MONTH FROM o.OrderDate) month,
         o.OrderID,
         COUNT(*) "Number of positions in order",
@@ -114,7 +114,7 @@ ORDER BY year,
 /*
     Query to display income by year
 */
-SELECT  '19' || EXTRACT(YEAR FROM o.OrderDate) year,
+SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
         SUM(od.Quantity * p.Price) "Income by year"
 FROM orders o
 JOIN OrderDetails od ON o.OrderID = od.OrderID
@@ -130,7 +130,7 @@ SELECT  year,
         rank
 FROM (
         -- Query to display income by year and ranking window function DENSE_RANK 
-        SELECT  '19' || EXTRACT(YEAR FROM o.OrderDate) year,
+        SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
                 SUM(od.Quantity * p.Price) IncomeByYear,
                 DENSE_RANK() OVER(ORDER BY SUM(od.Quantity * p.Price) DESC) AS rank
         FROM orders o
@@ -149,7 +149,7 @@ WHERE rank = 2; -- N=2
     • average order price per month
     • monthly income  
 */
-SELECT  '19' || year "Year", 
+SELECT  year "Year", 
         month "Month",
         COUNT(*) "Orders per month",
         ROUND(AVG(PositionsPerOrder), 1) "Avg number of positions",
@@ -187,7 +187,7 @@ FROM (
              ROUND(AVG(PositionsPerOrder), 1) AvgPositionQuantityPerOrder,
              ROUND(AVG(OrderPrice), 2) AvgOrderPricePerMonth
         FROM (
-                SELECT  '19' || EXTRACT(YEAR FROM o.OrderDate) year,
+                SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
                         EXTRACT(MONTH FROM o.OrderDate) month,
                         o.OrderID,
                         COUNT(*) PositionsPerOrder,
@@ -243,7 +243,7 @@ ORDER BY o.OrderDate, o.OrderID;
 */
 
 SELECT  o.OrderID,
-        '19' || EXTRACT(YEAR FROM o.OrderDate) year,
+        EXTRACT(YEAR FROM o.OrderDate) year,
         EXTRACT(MONTH FROM o.OrderDate) month,
         od.Quantity,
         p.Price,
@@ -268,7 +268,7 @@ SELECT  OrderID1,
         OrderPrice
 FROM (
         SELECT  o.OrderID OrderID1,
-                '19' || EXTRACT(YEAR FROM o.OrderDate) year,
+                EXTRACT(YEAR FROM o.OrderDate) year,
                 EXTRACT(MONTH FROM o.OrderDate) month,
                 od.Quantity quantity,
                 p.Price price,
