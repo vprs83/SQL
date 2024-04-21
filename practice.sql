@@ -145,7 +145,7 @@ WHERE rank = 2; -- N=2
     • year
     • month,
     • number of orders per month
-    • average number of positions per order
+    • average number of product positions per order
     • average order price per month
     • monthly income  
 */
@@ -154,7 +154,7 @@ SELECT  year "Year",
         COUNT(*) "Orders per month",
         ROUND(AVG(PositionsPerOrder), 1) "Avg number of positions",
         ROUND(AVG(OrderPrice), 2) "Avg order price",
-        SUM(OrderPrice) "Monthly income"
+        SUM(OrderPrice) "Monthly income"        
 FROM (
         SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
                 EXTRACT(MONTH FROM o.OrderDate) month,
@@ -172,6 +172,63 @@ GROUP BY    year,
             month
 ORDER BY    year,
             month;
+
+-- Update 
+
+SELECT  nq.year "Year", 
+        nq.month "Month",
+        COUNT(*) "Orders per month",
+        ROUND(AVG(nq.PositionsPerOrder), 1) "Avg number of positions",
+        ROUND(AVG(nq.OrderPrice), 2) "Avg order price",
+        SUM(nq.OrderPrice) "Monthly revenue",
+        nq.TargetSum,
+        SUM(nq.OrderPrice) - nq.TargetSum "Revenue VS Target",
+        --nq.TargetSum / 100 "1%",
+        ROUND(SUM(nq.OrderPrice) / (nq.TargetSum / 100), 2) "%",
+        CASE 
+            WHEN SUM(nq.OrderPrice) / (nq.TargetSum / 100) > 100
+                THEN '+' || (ROUND(SUM(nq.OrderPrice) / (nq.TargetSum / 100), 2) - 100) || '%'
+            WHEN SUM(nq.OrderPrice) / (nq.TargetSum / 100) < 100
+                THEN '-' || (100 - ROUND(SUM(nq.OrderPrice) / (nq.TargetSum / 100), 2)) || '%'
+            ELSE '0'
+        END "Variance"
+FROM (
+        SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
+                EXTRACT(MONTH FROM o.OrderDate) month,
+                o.OrderID,
+                COUNT(*) PositionsPerOrder,
+                SUM(od.Quantity * p.Price) OrderPrice,
+                t.TargetSum
+        FROM Orders o
+        JOIN Stores s ON o.StoreID = s.StoreID
+        JOIN Targets t ON   s.StoreID = t.StoreID AND
+                            EXTRACT(YEAR FROM o.OrderDate) = t.year AND
+                            EXTRACT(MONTH FROM o.OrderDate) = t.month
+        JOIN OrderDetails od ON o.OrderID = od.OrderID
+        JOIN Products p ON od.ProductID = p.ProductID
+        GROUP BY EXTRACT(YEAR FROM o.OrderDate),
+                 EXTRACT(MONTH FROM o.OrderDate),
+                 o.OrderID,
+                 t.TargetSum                
+    ) nq
+GROUP BY    nq.year, 
+            nq.month,
+            nq.TargetSum
+ORDER BY    nq.year,
+            nq.month;
+
+/* */
+        SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
+                EXTRACT(MONTH FROM o.OrderDate) month,
+                o.OrderID,
+                COUNT(*) PositionsPerOrder,
+                SUM(od.Quantity * p.Price) OrderPrice
+        FROM Orders o
+        JOIN OrderDetails od ON o.OrderID = od.OrderID
+        JOIN Products p ON od.ProductID = p.ProductID
+        GROUP BY EXTRACT(YEAR FROM o.OrderDate),
+                 EXTRACT(MONTH FROM o.OrderDate),
+                 o.OrderID;
 
 /*
     Query to
@@ -203,7 +260,11 @@ FROM (
     ) sq2
 GROUP BY year;
 
-/*
+/*  
+    ---------- Not working! Fix it. ----------
+    Add ranking query (n-th best employee)
+
+
     Query for employee summary table:
     • first and last name of the employee,
     • year and month of order execution,
@@ -211,8 +272,7 @@ GROUP BY year;
     • number of positions in the order
     • order price
 */
-SELECT  LastName, 
-        FirstName,
+SELECT  e.EmployeeID,
         EXTRACT(YEAR FROM o.OrderDate) year,
         EXTRACT(MONTH FROM o.OrderDate) month,
         o.OrderId,
