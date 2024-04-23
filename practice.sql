@@ -184,7 +184,7 @@ SELECT  nq.year "Year",
         nq.TargetSum,
         SUM(nq.OrderPrice) - nq.TargetSum "Revenue VS Target",
         --nq.TargetSum / 100 "1%",
-        ROUND(SUM(nq.OrderPrice) / (nq.TargetSum / 100), 2) "%",
+        ROUND(SUM(nq.OrderPrice) / (nq.TargetSum / 100), 2) || '%' "%",
         CASE 
             WHEN SUM(nq.OrderPrice) / (nq.TargetSum / 100) > 100
                 THEN '+' || (ROUND(SUM(nq.OrderPrice) / (nq.TargetSum / 100), 2) - 100) || '%'
