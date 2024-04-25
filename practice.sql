@@ -173,8 +173,14 @@ GROUP BY    year,
 ORDER BY    year,
             month;
 
--- Update 
-
+/* 
+    Order revenue summary query:
+    • year
+    • month
+    • revenue
+    • revenue vs target
+    • variance
+*/
 SELECT  nq.year "Year", 
         nq.month "Month",
         COUNT(*) "Orders per month",
@@ -184,7 +190,9 @@ SELECT  nq.year "Year",
         nq.TargetSum,
         SUM(nq.OrderPrice) - nq.TargetSum "Revenue VS Target",
         --nq.TargetSum / 100 "1%",
-        ROUND(SUM(nq.OrderPrice) / (nq.TargetSum / 100), 2) || '%' "%",
+        
+        ROUND(SUM((nq.OrderPrice) / (nq.TargetSum / 100)) / 100, 4) "%",    -- 104.94% = 1.0494
+        --ROUND(SUM(nq.OrderPrice) / (nq.TargetSum / 100), 2) || '%' "%",   -- 104.94%
         CASE 
             WHEN SUM(nq.OrderPrice) / (nq.TargetSum / 100) > 100
                 THEN '+' || (ROUND(SUM(nq.OrderPrice) / (nq.TargetSum / 100), 2) - 100) || '%'
@@ -216,6 +224,25 @@ GROUP BY    nq.year,
             nq.TargetSum
 ORDER BY    nq.year,
             nq.month;
+
+/* Categories rating by revenue per month and years summary query */
+SELECT 
+        EXTRACT(YEAR FROM o.OrderDate) "year",
+        --EXTRACT(MONTH FROM o.OrderDate),
+        c.CategoryName "Category",
+        SUM(od.Quantity * p.Price) "Sum",
+        DENSE_RANK() OVER(
+                            PARTITION BY 
+                                            EXTRACT(YEAR FROM o.OrderDate)
+                                            ORDER BY SUM(od.Quantity * p.Price) DESC) rank      
+FROM orders o
+JOIN orderDetails od    ON o.OrderID = od.OrderID
+JOIN products p         ON od.ProductID = p.ProductID
+JOIN categories c       ON p.CategoryID = c.CategoryID
+GROUP BY 
+            EXTRACT(YEAR FROM o.OrderDate),
+            --EXTRACT(MONTH FROM o.OrderDate),
+            c.CategoryName;
 
 /* */
         SELECT  EXTRACT(YEAR FROM o.OrderDate) year,
