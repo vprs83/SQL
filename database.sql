@@ -208,3 +208,25 @@ UPDATE targets SET TargetSum = 100000 WHERE TargetID = 21;
 UPDATE targets SET TargetSum = 110000 WHERE TargetID = 22;
 
 SELECT * FROM targets; 
+
+-------------------------- DB update #2 --------------------------
+-- create table, EMPLOYEE_TARGETS
+CREATE TABLE employee_targets(
+    TargetID    NUMBER      NOT NULL,
+    EmployeeID  NUMBER      NOT NULL,
+    Year        VARCHAR2(4) NOT NULL,
+    Month       NUMBER      NOT NULL,
+    TargetSum   NUMBER,
+    
+    PRIMARY KEY(TargetID),
+    
+    FOREIGN KEY(EmployeeID)
+        REFERENCES employees(EmployeeID)
+);
+
+ALTER TABLE employees ADD Gender VARCHAR2(10); --NOT NULL;
+
+UPDATE employees SET gender = 'Male'    WHERE EmployeeID IN (2, 5, 6, 7);
+UPDATE employees SET gender = 'Female'  WHERE EmployeeID IN (1, 3, 4, 8, 9);
+SELECT * FROM employees; 
+
