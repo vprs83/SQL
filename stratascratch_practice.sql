@@ -134,3 +134,40 @@ FROM (
 GROUP BY    user_id, 
             sq3.session
 HAVING sq3.session IS NOT NULL;
+
+/*
+    ID 10351 Activity Rank
+    
+    Find the email activity rank for each user. 
+    Email activity rank is defined by the total number of emails sent. 
+    The user with the highest number of emails sent will have a rank of 1, and so on. 
+    Output the user, total emails, and their activity rank. 
+    Order records by the total emails in descending order. 
+    Sort users with the same number of emails in alphabetical order.
+    In your rankings, return a unique value (i.e., a unique rank) even if multiple users have the same number of emails. 
+    For tie breaker use alphabetical order of the user usernames.
+*/
+
+SELECT  sq2.sq_from_user,
+        sq2.sq_number_of_emails,
+        ROW_NUMBER() OVER(ORDER BY sq2.sq_number_of_emails DESC)
+FROM (
+        SELECT  sq.from_user        AS sq_from_user,
+                sq.number_of_emails AS sq_number_of_emails,
+                DENSE_RANK() OVER(ORDER BY number_of_emails DESC) AS activity_rank
+        FROM (
+                SELECT  from_user,
+                        COUNT(from_user) AS number_of_emails
+                FROM google_gmail_emails
+                GROUP BY from_user
+            ) sq
+        ORDER BY activity_rank, from_user ASC
+    ) sq2;
+
+-- Hints solution
+SELECT  from_user, 
+        COUNT(from_user) AS number_of_emails, 
+        ROW_NUMBER() OVER(ORDER BY COUNT(from_user) DESC, from_user ASC)
+FROM        google_gmail_emails 
+GROUP BY    from_user
+ORDER BY    2 DESC, 1;   -- ORDER BY 2 DESC, 1
