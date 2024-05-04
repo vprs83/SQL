@@ -1,6 +1,7 @@
 -- CTE, Common Table Expression, WITH clause 
 -- https://oracle-base.com/articles/misc/with-clause#subquery-factoring
 -- subquery factoring process
+-- exercise
 
 create table dept (
   deptno    number(2) constraint pk_dept primary key,
@@ -108,6 +109,35 @@ where  dept_total > (
                     )
 order by dname;
 
+/*
+    WITH 
+    ... 
+    SELECT
+*/
+--WITH cl_count(year, month, active_clients_amount) AS
+WITH cl_count AS
+(
+    SELECT  EXTRACT(YEAR FROM report_month) year,
+            EXTRACT(MONTH FROM report_month) month,
+            COUNT(client_id) AS active_clients_amount
+    FROM active_clients
+    GROUP BY    EXTRACT(YEAR FROM report_month),
+                EXTRACT(MONTH FROM report_month)
+)
+SELECT year, month, active_clients_amount
+FROM cl_count;
+
+WITH active_client(x, y, z) AS
+(
+    SELECT  EXTRACT(YEAR FROM report_month) year,
+            EXTRACT(MONTH FROM report_month) month,
+            COUNT(client_id) AS active_clients_amount
+    FROM active_clients
+    GROUP BY    EXTRACT(YEAR FROM report_month),
+                EXTRACT(MONTH FROM report_month)
+)
+SELECT x, y, z
+FROM active_client;
 
 /* Subquery factoring process */
 SELECT  dname,
@@ -172,4 +202,108 @@ WHERE   salary_sum > (
                         FROM avg_salary
                     );
         
+/*
+    ACTIVE_CLIENTS contains a slice of bank clients who made any transactions in a given month. 
+    Lets consider that a client has left the bank in month N if he is active in month N 
+    (present in the ACTIVE_CLIENTS table) and is not active in months N+1, N+2, N+3
+    
+    Exercise:
+        display the number of active clients each month;
+        share of clients who left the bank each month       
+    
+    Expected answer:
+    
+    01-JAN-18	0.33
+    01-FEB-18	0
+    01-MAR-18	0
+    01-APR-18	0.33
+    01-MAY-18	0
+*/
 
+CREATE TABLE active_clients(
+    report_month    DATE,
+    client_id       NUMBER
+);
+DROP TABLE ACTIVE_CLIENTS;
+
+INSERT INTO active_clients VALUES(TO_DATE('2018-01-01', 'YYYY-MM-DD'), 1);
+INSERT INTO active_clients VALUES(TO_DATE('2018-01-01', 'YYYY-MM-DD'), 2);
+INSERT INTO active_clients VALUES(TO_DATE('2018-01-01', 'YYYY-MM-DD'), 3);
+INSERT INTO active_clients VALUES(TO_DATE('2018-02-01', 'YYYY-MM-DD'), 2);
+INSERT INTO active_clients VALUES(TO_DATE('2018-02-01', 'YYYY-MM-DD'), 4);
+INSERT INTO active_clients VALUES(TO_DATE('2018-03-01', 'YYYY-MM-DD'), 1);
+INSERT INTO active_clients VALUES(TO_DATE('2018-03-01', 'YYYY-MM-DD'), 2);
+INSERT INTO active_clients VALUES(TO_DATE('2018-04-01', 'YYYY-MM-DD'), 1);
+INSERT INTO active_clients VALUES(TO_DATE('2018-04-01', 'YYYY-MM-DD'), 2);
+INSERT INTO active_clients VALUES(TO_DATE('2018-04-01', 'YYYY-MM-DD'), 4);
+INSERT INTO active_clients VALUES(TO_DATE('2018-05-01', 'YYYY-MM-DD'), 1);
+INSERT INTO active_clients VALUES(TO_DATE('2018-05-01', 'YYYY-MM-DD'), 5);
+INSERT INTO active_clients VALUES(TO_DATE('2018-05-01', 'YYYY-MM-DD'), 2);
+
+SELECT * from active_clients;
+
+WITH 
+    active_client_count AS
+    (
+        SELECT  report_month AS rm,
+                COUNT(client_id) AS active_clients_amount
+        FROM active_clients
+        GROUP BY report_month
+    ),
+    active_client_ids AS
+    (
+        SELECT client_id AS active_client_id
+        FROM active_clients
+        WHERE report_month = (SELECT MAX(report_month) AS last_month FROM active_clients)
+    ),
+    inactive_clients_count AS
+    (
+        SELECT  DISTINCT COUNT(DISTINCT client_id) AS not_active_client_amount,
+                MAX(report_month) OVER(PARTITION BY client_id) AS month_of_no_activity_begin 
+        FROM    active_clients
+        WHERE   client_id NOT IN (SELECT active_client_id FROM active_client_ids)
+        GROUP BY    client_id,
+                    report_month
+    ),
+    active_vs_inactive_clients_statistics AS
+    (
+        SELECT  DISTINCT report_month AS report_date,
+                (
+                    SELECT not_active_client_amount 
+                    FROM inactive_clients_count
+                    WHERE month_of_no_activity_begin = report_month
+                ) AS x,
+                (
+                    SELECT active_clients_amount
+                    FROM active_client_count
+                    WHERE rm = report_month
+                ) AS y
+                
+        FROM active_clients
+    )
+SELECT report_date AS "Month-Year",
+        CASE
+            WHEN x/y IS NULL THEN 0
+            WHEN x/y IS NOT NULL THEN ROUND(x/y, 2)
+        END AS "Share of inactive clients"
+FROM active_vs_inactive_clients_statistics;
+
+/* Test section */
+
+SELECT client_id AS active_client_id
+FROM active_clients
+WHERE report_month = (SELECT MAX(report_month) AS last_month FROM active_clients);
+
+SELECT  DISTINCT client_id AS not_active_client,
+        --report_month AS last_active_month,
+        MAX(report_month) OVER(PARTITION BY client_id) AS month_of_no_activity_begin 
+FROM active_clients
+WHERE client_id IN (3, 4);
+
+
+SELECT  DISTINCT COUNT(DISTINCT client_id) AS not_active_client,
+        MAX(report_month) OVER(PARTITION BY client_id) AS month_of_no_activity_begin 
+FROM active_clients
+WHERE client_id IN (3, 4)
+GROUP BY    client_id,
+            report_month;
