@@ -80,6 +80,20 @@ FROM (
 WHERE next_created_at - created_at <= 7
 ORDER BY user_id;
 
+-- use analytic function LEAD(), without self join
+-- use CTE
+WITH next_purchase_date AS
+(
+    SELECT  DISTINCT user_id,
+            created_at,
+            LEAD(created_at) OVER(PARTITION BY user_id ORDER BY created_at) AS next_created_at
+    FROM amazon_transactions
+)
+SELECT DISTINCT user_id "Returning active users"
+FROM next_purchase_date
+WHERE next_created_at - created_at <= 7
+ORDER BY user_id;
+
 /*
     ID 10352    Users By Average Session Time
 
@@ -170,4 +184,67 @@ SELECT  from_user,
         ROW_NUMBER() OVER(ORDER BY COUNT(from_user) DESC, from_user ASC)
 FROM        google_gmail_emails 
 GROUP BY    from_user
-ORDER BY    2 DESC, 1;   -- ORDER BY 2 DESC, 1
+ORDER BY    2 DESC, 1;
+
+/*
+    ID 10319 Monthly Percentage Difference
+    
+    Given a table of purchases by date, 
+    calculate the month-over-month percentage change in revenue. 
+    The output should include the year-month date (YYYY-MM) 
+    and percentage change, rounded to the 2nd decimal point, 
+    and sorted from the beginning of the year to the end of the year.
+    
+    The percentage change column will be populated from the 2nd month forward 
+    and can be calculated as ((this month's revenue - last month's revenue) / last month's revenue)*100.
+*/
+
+-- Solution must be verified for PostgreSQL / Oracle !
+WITH 
+    get_year_and_month_from_field AS
+    (
+        SELECT  EXTRACT(YEAR from created_at) as year,
+                EXTRACT(MONTH from created_at) as month,
+                purchase_id,
+                value
+        FROM sf_transactions
+    ),
+    year_and_month_concat AS
+    (
+        SELECT  year || '-' || month AS year_month,
+                purchase_id,
+                value
+        FROM get_year_and_month_from_field
+    ),
+    year_and_month_string_to_date AS
+    (
+        SELECT  TO_DATE(year_month, 'YYYY-MM') AS date,
+                year_month,
+                purchase_id,
+                value
+        FROM year_and_month_concat
+    ),
+    revenue_sum_per_month AS
+    (
+        SELECT  DISTINCT year_month,
+                date,
+                SUM(value) OVER(PARTITION BY year_month) month_revenue
+        FROM year_and_month_string_to_date
+    ),
+    add_next_month_revenue AS
+    (
+        SELECT  DISTINCT year_month,
+                date,
+                month_revenue,
+                LAG(month_revenue) OVER(ORDER BY date) next_month_revenue
+        FROM revenue_sum_per_month
+        ORDER BY date ASC
+    )
+SELECT  year_month,
+        -- date,
+        -- month_revenue,
+        -- next_month_revenue,
+        ((month_revenue - next_month_revenue) / next_month_revenue) * 100 "%"
+FROM add_next_month_revenue;
+
+
