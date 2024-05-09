@@ -247,4 +247,84 @@ SELECT  year_month,
         ((month_revenue - next_month_revenue) / next_month_revenue) * 100 "%"
 FROM add_next_month_revenue;
 
+/*
+    ID 10318 New Products
+    
+    You are given a table of product launches by company by year. 
+    Write a query to count the net difference between the number of products companies launched in 2020 
+    with the number of products companies launched in the previous year. 
+    Output the name of the companies and a net difference of net products released for 2020 compared to the previous year.
+*/
+WITH 
+    number_of_products_launched_per_year AS
+    (
+        SELECT  DISTINCT year, 
+                company_name,
+                COUNT(product_name) OVER(PARTITION BY year, company_name) AS number_of_launched_products_crnt_year
+        FROM car_launches
+    ),
+    add_products_lauched_previous_year AS
+    (
+        SELECT  year, 
+                company_name,
+                number_of_launched_products_crnt_year,
+                LAG(number_of_launched_products_crnt_year) OVER(PARTITION BY company_name ORDER BY year) number_of_launched_products_prev_year
+        FROM number_of_products_launched_per_year
+        ORDER BY company_name, year
+    ),
+    net_difference AS
+    (
+        SELECT  company_name,
+                number_of_launched_products_crnt_year - number_of_launched_products_prev_year AS net_products
+        FROM add_products_lauched_previous_year
+        WHERE number_of_launched_products_prev_year IS NOT NULL
+    )
+SELECT * FROM net_difference;
 
+/*
+    ID 10304 Risky Projects
+    
+    Identify projects that are at risk for going overbudget. 
+    A project is considered to be overbudget if the cost of all employees assigned to the project is greater than the budget of the project. 
+    
+    You'll need to prorate the cost of the employees to the duration of the project. For example, 
+    if the budget for a project that takes half a year to complete is $10K, then the total half-year salary of all employees assigned to the project should not exceed $10K. 
+    Salary is defined on a yearly basis, so be careful how to calculate salaries for the projects that last less or more than one year.
+    
+    Output a list of projects that are overbudget with their project name, project budget, and prorated total employee expense (rounded to the next dollar amount).
+    
+    HINT: to make it simpler, consider that all years have 365 days. You don't need to think about the leap years.
+*/
+WITH prorated_total_employee_expense_calc AS
+(
+    SELECT  DISTINCT lp.title,
+            lp.budget,
+            --CEILING(SUM((CAST(le.salary AS REAL) / 365) * (lp.end_date::date - lp.start_date::date)) OVER(PARTITION BY lp.id)) AS prorated_employee_expense
+            CEILING(SUM((CAST(le.salary AS REAL) / 365) * DATEDIFF(lp.end_date, lp.start_date)) OVER(PARTITION BY lp.id)) AS prorated_total_employee_expense
+    FROM linkedin_projects lp
+    JOIN linkedin_emp_projects lep ON lp.id = lep.project_id
+    JOIN linkedin_employees le ON lep.emp_id = le.id
+)
+SELECT  title,
+        budget,
+        prorated_total_employee_expense
+FROM  prorated_total_employee_expense_calc
+WHERE prorated_total_employee_expense > budget
+ORDER BY title;
+
+/*
+    ID 10308 Salaries Differences
+
+    Write a query that calculates the difference between the highest salaries found in the marketing and engineering departments. 
+    Output just the absolute difference in salaries.
+*/
+WITH max_salary_by_department AS
+(
+    SELECT  DISTINCT d.department,
+            MAX(salary) OVER(PARTITION BY department_id) max_salary
+    FROM db_employee e
+    JOIN db_dept d ON e.department_id = d.id
+    WHERE d.department IN ('marketing', 'engineering')
+)
+SELECT MAX(max_salary) - MIN(max_salary) AS "Absolute difference in salaries"
+FROM max_salary_by_department;
