@@ -328,3 +328,35 @@ WITH max_salary_by_department AS
 )
 SELECT MAX(max_salary) - MIN(max_salary) AS "Absolute difference in salaries"
 FROM max_salary_by_department;
+
+/*
+    ID 10300    Premium vs Freemium
+    Find the total number of downloads for paying and non-paying users by date. 
+    Include only records where non-paying customers have more downloads than paying customers. 
+    The output should be sorted by earliest date first and contain 3 columns date, non-paying downloads, paying downloads.
+*/
+WITH 
+    downloads_count(date, customer_status, sum_of_downloads) AS
+    (
+        SELECT  DISTINCT df.date,
+                ad.paying_customer,
+                SUM(df.downloads) OVER(PARTITION BY df.date, ad.paying_customer) 
+        FROM ms_user_dimension ud
+        JOIN ms_acc_dimension ad ON ad.acc_id = ud.acc_id
+        JOIN ms_download_facts df ON ud.user_id = df.user_id
+        ORDER BY    df.date,
+                    ad.paying_customer DESC
+    ),
+    embedding_output_into_row(date, paying_downloads, non_paying_downloads) AS
+    (
+        SELECT  date,
+                sum_of_downloads,
+                LEAD(sum_of_downloads) OVER(PARTITION BY date)
+        FROM downloads_count
+    )
+SELECT  date,
+        paying_downloads,
+        non_paying_downloads
+FROM    embedding_output_into_row
+WHERE   non_paying_downloads > paying_downloads AND
+        non_paying_downloads IS NOT NULL;
