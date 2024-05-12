@@ -331,6 +331,7 @@ FROM max_salary_by_department;
 
 /*
     ID 10300    Premium vs Freemium
+    
     Find the total number of downloads for paying and non-paying users by date. 
     Include only records where non-paying customers have more downloads than paying customers. 
     The output should be sorted by earliest date first and contain 3 columns date, non-paying downloads, paying downloads.
@@ -360,3 +361,96 @@ SELECT  date,
 FROM    embedding_output_into_row
 WHERE   non_paying_downloads > paying_downloads AND
         non_paying_downloads IS NOT NULL;
+        
+/*
+    ID 10285    Acceptance Rate By Date
+    
+    What is the overall friend acceptance rate by date? 
+    Your output should have the rate of acceptances by the date the request was sent. 
+    Order by the earliest date to latest.
+    
+    Assume that each friend request starts by a user sending (i.e., user_id_sender) 
+    a friend request to another user (i.e., user_id_receiver) that's logged in the table with action = 'sent'. 
+    
+    If the request is accepted, the table logs action = 'accepted'. 
+    If the request is not accepted, no record of action = 'accepted' is logged.
+*/
+WITH 
+    friend_request_process(user_id_sender, date, action, friend_accepted_status) AS
+    (
+        SELECT  user_id_sender,
+                date,
+                action,
+                LEAD(action) OVER(PARTITION BY user_id_sender)
+        FROM fb_friend_requests
+    ),
+    friend_requests_sended(date, number_of_requests) AS
+    (
+        SELECT  DISTINCT date, 
+                COUNT(user_id_sender) OVER(PARTITION BY date)
+        FROM friend_request_process
+        WHERE action = 'sent'
+    ),
+    friend_requests_accepted(date, number_of_requests) AS
+    (
+        SELECT  DISTINCT date, 
+                COUNT(user_id_sender) OVER(PARTITION BY date)
+        FROM friend_request_process
+        WHERE action = 'sent' AND friend_accepted_status = 'accepted'
+    ),
+    friend_acceptance_rate(date, rate) AS
+    (
+        SELECT  rs.date,
+                CAST(ra.number_of_requests AS NUMERIC) / CAST(rs.number_of_requests AS NUMERIC)
+        FROM friend_requests_sended rs
+        JOIN friend_requests_accepted ra ON rs.date = ra.date
+    )
+SELECT  date,
+        rate
+FROM friend_acceptance_rate;
+
+/*
+    ID 10284    Popularity Percentage
+    
+    Find the popularity percentage for each user on Meta/Facebook. 
+    The popularity percentage is defined as the total number of friends the user has divided by the total number of users on the platform, then converted into a percentage by multiplying by 100.
+    Output each user along with their popularity percentage. Order records in ascending order by user id.
+    The 'user1' and 'user2' column are pairs of friends.
+*/
+WITH 
+    user_pairs_count1 AS
+    (
+        SELECT  DISTINCT user1, 
+                COUNT(user2) OVER(PARTITION BY user1) pairs
+        FROM facebook_friends
+    ),
+    user_pairs_count2 AS
+    (
+        SELECT  DISTINCT user2, 
+                COUNT(user1) OVER(PARTITION BY user2) pairs
+        FROM facebook_friends
+    ),
+    users_union(users, pairs) AS
+    (
+        SELECT *
+        FROM user_pairs_count1
+        UNION
+        SELECT *
+        FROM user_pairs_count2        
+    ),
+    users_and_amount_of_friends_calc AS
+    (
+        SELECT  users,
+                SUM(pairs) AS sum_of_pairs
+        FROM users_union
+        GROUP BY users
+    ),
+    users_amount_calc AS
+    (
+        SELECT COUNT(users) users_amount
+        FROM users_and_amount_of_friends_calc
+    )
+SELECT  users,
+        (sum_of_pairs / (SELECT users_amount FROM users_amount_calc)) * 100 AS popularity_percent
+FROM users_and_amount_of_friends_calc
+ORDER BY users ASC;
