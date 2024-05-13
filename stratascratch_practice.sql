@@ -441,16 +441,74 @@ WITH
     users_and_amount_of_friends_calc AS
     (
         SELECT  users,
-                SUM(pairs) AS sum_of_pairs
+                SUM(pairs) AS sum_of_pairs,
+                COUNT(users) OVER() users_amount
         FROM users_union
         GROUP BY users
-    ),
-    users_amount_calc AS
-    (
-        SELECT COUNT(users) users_amount
-        FROM users_and_amount_of_friends_calc
     )
-SELECT  users,
-        (sum_of_pairs / (SELECT users_amount FROM users_amount_calc)) * 100 AS popularity_percent
+SELECT    users,
+        (sum_of_pairs / users_amount) * 100 AS popularity_percent
 FROM users_and_amount_of_friends_calc
 ORDER BY users ASC;
+
+/*
+    ID 10176    Bikes Last Used
+    
+    Find the last time each bike was in use. 
+    Output both the bike number and the date-timestamp of the bike's last use (i.e., the date-time the bike was returned). 
+    Order the results by bikes that were most recently used.
+*/
+
+SELECT  DISTINCT bike_number,
+        LAST_VALUE(end_time) OVER(PARTITION BY bike_number) last_used
+FROM dc_bikeshare_q1_2012
+ORDER BY last_used DESC;
+
+SELECT COUNT(bike_number)           FROM dc_bikeshare_q1_2012;  -- 100
+SELECT COUNT(DISTINCT bike_number)  FROM dc_bikeshare_q1_2012;  -- 98
+
+-- Hints solution
+SELECT bike_number,
+       max(end_time) last_used
+FROM dc_bikeshare_q1_2012
+GROUP BY bike_number
+ORDER BY last_used DESC;
+
+/*
+    ID 10159    Ranking Most Active Guests
+    
+    Rank guests based on the total number of messages they've exchanged with any of the hosts. 
+    Guests with the same number of messages as other guests should have the same rank. 
+    Do not skip rankings if the preceding rankings are identical.
+    Output the rank, guest id, and number of total messages they've sent. Order by the highest number of total messages first.
+*/
+SELECT  DENSE_RANK() OVER(ORDER BY SUM(n_messages) DESC) AS ranking,
+        id_guest,
+        SUM(n_messages)
+FROM airbnb_contacts
+GROUP BY id_guest
+ORDER BY ranking ASC;
+
+/*
+    ID 10077    Income By Title and Gender
+    
+    Find the average total compensation based on employee titles and gender. 
+    Total compensation is calculated by adding both the salary and bonus of each employee. 
+    However, not every employee receives a bonus so disregard employees without bonuses in your calculation. 
+    Employee can receive more than one bonus.
+    Output the employee title, gender (i.e., sex), along with the average total compensation.
+*/
+WITH total_compensation_calc(id, employee_title, sex, total_compensation) AS
+(
+    SELECT  DISTINCT e.id,
+            employee_title,
+            sex,
+            e.salary + SUM(b.bonus) OVER(PARTITION BY b.worker_ref_id)
+    FROM sf_employee e
+    JOIN sf_bonus b ON e.id = b.worker_ref_id
+)
+SELECT  employee_title,
+        sex,
+        AVG(total_compensation)
+FROM total_compensation_calc
+GROUP BY employee_title, sex;
