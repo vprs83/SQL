@@ -512,3 +512,51 @@ SELECT  employee_title,
         AVG(total_compensation)
 FROM total_compensation_calc
 GROUP BY employee_title, sex;
+
+/*
+    ID 10134    Spam Posts
+    
+    Calculate the percentage of spam posts in all viewed posts by day. 
+    A post is considered a spam if a string "spam" is inside keywords of the post. 
+    Note that the facebook_posts table stores all posts posted by users. 
+    The facebook_post_views table is an action table denoting if a user has viewed a post.
+*/
+WITH spam_and_non_spam_posts AS 
+(
+        SELECT  DISTINCT fp.post_date AS date, 
+                COUNT(  CASE 
+                            WHEN fp.post_keywords LIKE '%spam%'
+                            THEN fp.post_id
+                            ELSE NULL
+                        END
+                    )               OVER post_date_w    AS n_spam,
+                COUNT(fp.post_id)   OVER post_date_w    AS n_posts
+        FROM facebook_posts fp
+        JOIN facebook_post_views fpv ON fp.post_id = fpv.post_id
+        WINDOW post_date_w AS 
+        (
+            PARTITION BY fp.post_date
+        )
+)
+SELECT  date,    
+        --CAST(n_spam AS numeric) / CAST(n_posts AS numeric) * 100 AS spam_share,
+        --float4(n_spam) / float4(n_posts) * 100 AS spam_share
+        (n_spam/n_posts::real) * 100 AS spam_share
+FROM spam_and_non_spam_posts
+ORDER BY date;
+
+/*
+    ID 10299    Finding Updated Records
+    
+    We have a table with employees and their salaries, however, some of the records are old and contain outdated salary information. 
+    Find the current salary of each employee assuming that salaries increase each year. 
+    Output their id, first name, last name, department ID, and current salary. 
+    Order your list by employee ID in ascending order.
+*/
+SELECT  DISTINCT id,
+        first_name,
+        last_name,
+        department_id,
+        MAX(salary) OVER(PARTITION BY id) current_salary
+FROM ms_employee_salary
+ORDER BY id ASC;
