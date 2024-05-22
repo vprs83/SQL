@@ -560,3 +560,35 @@ SELECT  DISTINCT id,
         MAX(salary) OVER(PARTITION BY id) current_salary
 FROM ms_employee_salary
 ORDER BY id ASC;
+
+/*
+    ID 9942     Largest Olympics
+    
+    Find the Olympics with the highest number of athletes. 
+    The Olympics game is a combination of the year and the season, and is found in the 'games' column. 
+    Output the Olympics along with the corresponding number of athletes.
+*/
+WITH
+    unique_athletes AS
+    (
+        SELECT  DISTINCT id,
+                games
+        FROM olympics_athletes_events
+    ),
+    athletes_count AS
+    (
+        SELECT  DISTINCT games,
+                COUNT(id) OVER(PARTITION BY games) number_of_athletes
+        FROM unique_athletes
+    ),
+    games_ranking AS
+    (
+        SELECT  games,
+                number_of_athletes,
+                DENSE_RANK() OVER(ORDER BY number_of_athletes DESC) game_rank
+        FROM athletes_count
+    )
+SELECT  games,
+        number_of_athletes
+FROM games_ranking
+WHERE game_rank = 1;
