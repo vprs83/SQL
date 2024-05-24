@@ -592,3 +592,94 @@ SELECT  games,
         number_of_athletes
 FROM games_ranking
 WHERE game_rank = 1;
+
+/*
+    ID 9892     Second Highest Salary
+    Find the second highest salary of employees.
+*/
+WITH salary_ranking AS (
+    SELECT  salary,
+            DENSE_RANK() OVER(ORDER BY salary DESC) AS salary_rank
+    FROM employee
+)
+SELECT salary
+FROM   salary_ranking
+WHERE  salary_rank = 2;
+
+/*
+    ID 9847     Number of Workers by Department Starting in April or Later
+    Find the number of workers by department who joined in or after April.
+    Output the department name along with the corresponding number of workers.
+    Sort records based on the number of workers in descending order.
+*/
+SELECT  DISTINCT department,
+        COUNT(worker_id) OVER(PARTITION BY department) number_of_workers
+FROM worker
+WHERE EXTRACT(MONTH FROM joining_date) >= 4;
+
+/*
+    ID 9915     Highest Cost Orders
+    Find the customer with the highest daily total order cost between 2019-02-01 to 2019-05-01.
+    If customer had more than one order on a certain day, sum the order costs on daily basis.
+    Output customer's first name, total cost of their items, and the date.
+    For simplicity, you can assume that every first name in the dataset is unique.
+*/
+WITH customers_with_max_order_costs AS
+(
+    SELECT  DISTINCT c.id id,
+            c.first_name name,
+            o.order_date date,
+            SUM(o.total_order_cost) OVER(PARTITION BY o.cust_id, order_date) order_sum
+    FROM customers c
+    JOIN orders o ON c.id = o.cust_id
+    WHERE o.order_date BETWEEN '2019-02-01' AND '2019-05-01'
+)
+SELECT  name,
+        date,
+        MAX(order_sum)
+FROM customers_with_max_order_costs
+GROUP BY 1, 2
+ORDER BY 3 DESC
+LIMIT 1;
+
+/*
+    ID 9894     Employee and Manager Salaries
+    Find employees who are earning more than their managers.
+    Output the employee's first name along with the corresponding salary.
+*/
+SELECT  e.first_name,
+        e.salary
+FROM employee e
+JOIN employee e2 ON e.manager_id = e2.id
+WHERE e.salary > e2.salary;
+
+/*
+    ID 10141    Apple Product Counts
+    Find the number of Apple product users and the number of total users with a device and group the counts by language.
+    Assume Apple products are only MacBook-Pro, iPhone 5s, and iPad-air.
+    Output the language along with the total number of Apple users and users with any device.
+    Order your results based on the number of total users in descending order.
+
+*/
+-- SELECT COUNT(DISTINCT user_id)
+-- FROM playbook_events;   -- 85
+
+-- SELECT COUNT(user_id)
+-- FROM playbook_events;   -- 100
+WITH
+    total_users AS (
+        SELECT  DISTINCT user_id
+        FROM    playbook_events
+    ),
+    apple_users AS (
+        SELECT  DISTINCT user_id
+        FROM    playbook_events
+        WHERE   device IN ('macbook pro', 'iphone 5s', 'ipad air')
+    )
+SELECT  DISTINCT pu.language,
+        COUNT(au.user_id) OVER(PARTITION BY pu.language) n_apple_users,
+        COUNT(tu.user_id) OVER(PARTITION BY pu.language) n_total_users
+FROM        total_users tu
+LEFT JOIN   apple_users au ON tu.user_id = au.user_id
+JOIN        playbook_users pu ON tu.user_id = pu.user_id
+ORDER BY    n_total_users DESC;
