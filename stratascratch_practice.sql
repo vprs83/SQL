@@ -4,11 +4,10 @@
     Not checked solution!
     
     ID 10368 Population Density
-
+    
     You are working on a data analysis project at Deloitte where you need to analyze a dataset containing information
     about various cities. Your task is to calculate the population density of these cities, rounded to the nearest integer, and identify the cities with the minimum and maximum densities.
     The population density should be calculated as (Population / Area).
-
     The output should contain 'city', 'country', 'density'.
 */
 
@@ -292,7 +291,6 @@ SELECT * FROM net_difference;
     Salary is defined on a yearly basis, so be careful how to calculate salaries for the projects that last less or more than one year.
     
     Output a list of projects that are overbudget with their project name, project budget, and prorated total employee expense (rounded to the next dollar amount).
-    
     HINT: to make it simpler, consider that all years have 365 days. You don't need to think about the leap years.
 */
 WITH prorated_total_employee_expense_calc AS
@@ -313,8 +311,7 @@ WHERE prorated_total_employee_expense > budget
 ORDER BY title;
 
 /*
-    ID 10308 Salaries Differences
-
+    ID 10308    Salaries Differences
     Write a query that calculates the difference between the highest salaries found in the marketing and engineering departments. 
     Output just the absolute difference in salaries.
 */
@@ -446,14 +443,13 @@ WITH
         FROM users_union
         GROUP BY users
     )
-SELECT    users,
+SELECT  users,
         (sum_of_pairs / users_amount) * 100 AS popularity_percent
 FROM users_and_amount_of_friends_calc
 ORDER BY users ASC;
 
 /*
-    ID 10176    Bikes Last Used
-    
+    ID 10176    Bikes Last Used    
     Find the last time each bike was in use. 
     Output both the bike number and the date-timestamp of the bike's last use (i.e., the date-time the bike was returned). 
     Order the results by bikes that were most recently used.
@@ -521,8 +517,7 @@ GROUP BY employee_title, sex;
     Note that the facebook_posts table stores all posts posted by users. 
     The facebook_post_views table is an action table denoting if a user has viewed a post.
 */
-WITH spam_and_non_spam_posts AS 
-(
+WITH spam_and_non_spam_posts AS (
         SELECT  DISTINCT fp.post_date AS date, 
                 COUNT(  CASE 
                             WHEN fp.post_keywords LIKE '%spam%'
@@ -533,8 +528,7 @@ WITH spam_and_non_spam_posts AS
                 COUNT(fp.post_id)   OVER post_date_w    AS n_posts
         FROM facebook_posts fp
         JOIN facebook_post_views fpv ON fp.post_id = fpv.post_id
-        WINDOW post_date_w AS 
-        (
+        WINDOW post_date_w AS (
             PARTITION BY fp.post_date
         )
 )
@@ -569,20 +563,17 @@ ORDER BY id ASC;
     Output the Olympics along with the corresponding number of athletes.
 */
 WITH
-    unique_athletes AS
-    (
+    unique_athletes AS (
         SELECT  DISTINCT id,
                 games
         FROM olympics_athletes_events
     ),
-    athletes_count AS
-    (
+    athletes_count AS (
         SELECT  DISTINCT games,
                 COUNT(id) OVER(PARTITION BY games) number_of_athletes
         FROM unique_athletes
     ),
-    games_ranking AS
-    (
+    games_ranking AS (
         SELECT  games,
                 number_of_athletes,
                 DENSE_RANK() OVER(ORDER BY number_of_athletes DESC) game_rank
@@ -608,6 +599,7 @@ WHERE  salary_rank = 2;
 
 /*
     ID 9847     Number of Workers by Department Starting in April or Later
+    
     Find the number of workers by department who joined in or after April.
     Output the department name along with the corresponding number of workers.
     Sort records based on the number of workers in descending order.
@@ -619,13 +611,13 @@ WHERE EXTRACT(MONTH FROM joining_date) >= 4;
 
 /*
     ID 9915     Highest Cost Orders
+    
     Find the customer with the highest daily total order cost between 2019-02-01 to 2019-05-01.
     If customer had more than one order on a certain day, sum the order costs on daily basis.
     Output customer's first name, total cost of their items, and the date.
     For simplicity, you can assume that every first name in the dataset is unique.
 */
-WITH customers_with_max_order_costs AS
-(
+WITH customers_with_max_order_costs AS (
     SELECT  DISTINCT c.id id,
             c.first_name name,
             o.order_date date,
@@ -655,6 +647,7 @@ WHERE e.salary > e2.salary;
 
 /*
     ID 10141    Apple Product Counts
+    
     Find the number of Apple product users and the number of total users with a device and group the counts by language.
     Assume Apple products are only MacBook-Pro, iPhone 5s, and iPad-air.
     Output the language along with the total number of Apple users and users with any device.
@@ -677,9 +670,143 @@ WITH
         WHERE   device IN ('macbook pro', 'iphone 5s', 'ipad air')
     )
 SELECT  DISTINCT pu.language,
-        COUNT(au.user_id) OVER(PARTITION BY pu.language) n_apple_users,
-        COUNT(tu.user_id) OVER(PARTITION BY pu.language) n_total_users
+        COUNT(au.user_id) OVER language_w n_apple_users,
+        COUNT(tu.user_id) OVER language_w n_total_users
 FROM        total_users tu
 LEFT JOIN   apple_users au ON tu.user_id = au.user_id
 JOIN        playbook_users pu ON tu.user_id = pu.user_id
+WINDOW      language_w AS ( PARTITION BY pu.language )
 ORDER BY    n_total_users DESC;
+
+/*
+    ID 514  Marketing Campaign Success [Advanced]
+    
+    You have a table of in-app purchases by user.
+    Users that make their first in-app purchase are placed in a marketing campaign where they see call-to-actions for more in-app purchases.
+    Find the number of users that made additional in-app purchases due to the success of the marketing campaign.
+    The marketing campaign doesn't start until one day after the initial in-app purchase so users that only made one or multiple purchases on the first day do not count,
+    nor do we count users that over time purchase only the products they purchased on the first day.
+*/
+WITH
+    first_purchase_date_filt AS (
+        SELECT  user_id,
+                MIN(created_at) first_purchase_date
+        FROM    marketing_campaign
+        GROUP BY user_id
+    ),
+    first_date_and_purchases_filt AS (
+        SELECT  user_id,
+                created_at,
+                product_id
+        FROM    marketing_campaign mc
+        WHERE   created_at IN   (
+                                    SELECT  fp.first_purchase_date
+                                    FROM    first_purchase_date_filt AS fp
+                                    WHERE   mc.user_id = fp.user_id
+                                )
+    )
+SELECT  COUNT(DISTINCT user_id)
+FROM    marketing_campaign mc
+WHERE   created_at NOT IN   (
+                                SELECT  fdp.created_at
+                                FROM    first_date_and_purchases_filt fdp
+                                WHERE   mc.user_id = fdp.user_id
+                            )
+                                AND
+        product_id NOT IN   (
+                                SELECT  fdp.product_id
+                                FROM    first_date_and_purchases_filt fdp
+                                WHERE   mc.user_id = fdp.user_id
+                            );
+
+/*
+    ID 10087    Find all posts which were reacted to with a heart
+    Find all posts which were reacted to with a heart. 
+    For such posts output all columns from facebook_posts table.
+*/
+SELECT  DISTINCT fp.post_id,
+        fp.poster,
+        fp.post_text,
+        fp.post_keywords,
+        fp.post_date
+FROM facebook_posts fp
+JOIN facebook_reactions fr ON fp.post_id = fr.post_id
+WHERE fr.reaction LIKE 'heart';
+
+/*
+    ID 10303    Top Percentile Fraud
+    
+    ABC Corp is a mid-sized insurer in the US and in the recent past their fraudulent claims have increased significantly for their personal auto insurance portfolio.
+    They have developed a ML based predictive model to identify propensity of fraudulent claims. 
+    Now, they assign highly experienced claim adjusters for top 5 percentile of claims identified by the model.
+    Your objective is to identify the top 5 percentile of claims from each state. 
+    Your output should be policy number, state, claim cost, and fraud score.
+*/
+WITH 
+    n_claims_in_five_percentile AS (
+        SELECT  DISTINCT state,
+                --ROUND(CAST(COUNT(policy_num) OVER(PARTITION BY state) AS numeric) / 100 * 5) five_percents
+                CEIL(CAST(COUNT(policy_num) OVER(PARTITION BY state) AS numeric) / 100 * 5) five_percentile
+        FROM fraud_score
+    ),
+    fraud_score_ranking_by_state AS (
+        SELECT  *,
+            DENSE_RANK() OVER(PARTITION BY state ORDER BY fraud_score DESC) fraud_score_rank
+        FROM fraud_score
+    )
+SELECT  policy_num,
+        state,
+        claim_cost,
+        fraud_score
+FROM fraud_score_ranking_by_state fs
+WHERE   state IN (SELECT state FROM n_claims_in_five_percentile) AND
+        fraud_score_rank <= (   SELECT five_percentile 
+                                FROM n_claims_in_five_percentile nc
+                                WHERE nc.state = fs.state 
+                            );
+
+/*
+    ID 10078    Find matching hosts and guests in a way that they are both of the same gender and nationality
+    Find matching hosts and guests pairs in a way that they are both of the same gender and nationality.
+    Output the host id and the guest id of matched pair.
+*/
+SELECT  DISTINCT ah.host_id,
+        ag.guest_id
+FROM airbnb_hosts ah
+JOIN airbnb_guests ag 
+    ON  ah.nationality = ag.nationality AND
+        ah.gender = ag.gender;
+
+/*
+    ID 10090    Find the percentage of shipable orders
+    Find the percentage of shipable orders.
+    Consider an order is shipable if the customer's address is known.
+*/
+SELECT (COUNT(*) / (SELECT COUNT(DISTINCT id) FROM orders)::real) * 100 percent_shipable
+FROM orders o
+JOIN customers c ON o.cust_id = c.id
+WHERE address IS NOT NULL;
+
+/*
+    ID 10046    Top 5 States With 5 Star Businesses
+    Find the top 5 states with the most 5 star businesses. 
+    Output the state name along with the number of 5-star businesses and order records by the number of 5-star businesses in descending order. In case there are ties in the number of businesses, return all the unique states. 
+    If two states have the same result, sort them in alphabetical order.
+*/
+WITH 
+    n_businesses_per_state AS (
+        SELECT  DISTINCT state,
+                COUNT(*) OVER(PARTITION BY state) n_businesses
+        FROM    yelp_business
+        WHERE   stars = 5
+    ),
+    state_runking AS (
+        SELECT  state,
+                n_businesses,
+                RANK() OVER(ORDER BY n_businesses DESC) state_rank
+        FROM    n_businesses_per_state
+    )
+SELECT  state,
+        n_businesses
+FROM    state_runking
+WHERE   state_rank <= 5;
