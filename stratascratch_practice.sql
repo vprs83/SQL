@@ -810,3 +810,109 @@ SELECT  state,
         n_businesses
 FROM    state_runking
 WHERE   state_rank <= 5;
+
+/*
+    ID 9782     Customer Revenue In March
+    Calculate the total revenue from each customer in March 2019. 
+    Include only customers who were active in March 2019.
+    Output the revenue along with the customer id and sort the results based on the revenue in descending order.
+*/
+SELECT  DISTINCT cust_id,
+        --EXTRACT(MONTH FROM order_date) AS month,
+        SUM(total_order_cost) OVER(PARTITION BY cust_id, EXTRACT(MONTH FROM order_date)) revenue
+FROM orders
+GROUP BY    cust_id,
+            EXTRACT(MONTH FROM order_date),
+            total_order_cost
+HAVING EXTRACT(MONTH FROM order_date) = 3
+ORDER BY revenue DESC;
+
+/*
+    ID 9905     Highest Target Under Manager
+    Find the highest target achieved by the employee or employees who works under the manager id 13. 
+    Output the first name of the employee and target achieved. 
+    The solution should show the highest target achieved under manager_id=13 and which employee(s) achieved it.
+*/
+WITH employee_rank_by_target AS (
+    SELECT  id,
+            first_name,
+            target,
+            DENSE_RANK() OVER(ORDER BY target DESC) e_rank
+    FROM    salesforce_employees
+    WHERE   manager_id = 13
+)
+SELECT  first_name,
+        target
+FROM    employee_rank_by_target
+WHERE   e_rank = 1;
+
+/*
+    ID 10060    Top Cool Votes
+    Find the review_text that received the highest number of  'cool' votes.
+    Output the business name along with the review text with the highest numbef of 'cool' votes.
+*/
+-- SELECT COUNT(review_id) FROM yelp_reviews;          -- 106
+-- SELECT COUNT(DISTINCT review_id) FROM yelp_reviews; -- 105
+
+WITH 
+    counting_cool_votes AS (
+        SELECT  business_name,
+                review_text, 
+                SUM(cool) OVER(PARTITION BY review_id) sum_of_votes
+        FROM    yelp_reviews
+    ),
+    ranking_businesses AS (
+        SELECT  business_name,
+                review_text,
+                DENSE_RANK() OVER(ORDER BY sum_of_votes DESC) b_rank
+        FROM    counting_cool_votes
+    )
+SELECT  business_name,
+        review_text
+FROM    ranking_businesses
+WHERE   b_rank = 1;
+
+/*
+    ID 10064    Highest Energy Consumption
+    Find the date with the highest total energy consumption from the Meta/Facebook data centers. 
+    Output the date along with the total energy consumption across all data centers.
+*/
+WITH
+    energy_consumption AS (
+        SELECT *
+        FROM fb_eu_energy 
+        UNION ALL
+        SELECT *
+        FROM fb_asia_energy
+        UNION ALL
+        SELECT *
+        FROM fb_na_energy 
+    ),
+    energy_consumption_filt AS (
+        SELECT  date,
+                SUM(consumption) c_sum
+        FROM energy_consumption
+        GROUP BY date
+    ),
+    max_consumption AS (
+        SELECT  date,
+                c_sum,
+                DENSE_RANK() OVER(ORDER BY c_sum DESC) c_rank
+        FROM energy_consumption_filt
+    )
+SELECT  date,
+        c_sum
+FROM    max_consumption
+WHERE   c_rank = 1;
+
+/*
+    ID 10166    Reviews of Hotel Arena
+    Find the number of rows for each review score earned by 'Hotel Arena'. 
+    Output the hotel name (which should be 'Hotel Arena'), 
+    review score along with the corresponding number of rows with that score for the specified hotel.
+*/
+SELECT  DISTINCT hotel_name,
+        reviewer_score,
+        COUNT(*) OVER(PARTITION BY reviewer_score)
+FROM hotel_reviews
+WHERE hotel_name = 'Hotel Arena';
