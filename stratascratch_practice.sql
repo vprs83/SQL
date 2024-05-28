@@ -916,3 +916,33 @@ SELECT  DISTINCT hotel_name,
         COUNT(*) OVER(PARTITION BY reviewer_score)
 FROM hotel_reviews
 WHERE hotel_name = 'Hotel Arena';
+
+/*
+    ID 10003    Lyft Driver Wages
+    Find all Lyft drivers who earn either equal to or less than 30k USD or equal to or more than 70k USD.
+    Output all details related to retrieved records.
+*/
+SELECT  index,
+        start_date,
+        end_date,
+        yearly_salary
+FROM    lyft_drivers
+WHERE   yearly_salary <= 30000 OR
+        yearly_salary >= 70000;
+        
+/*
+    ID 9991     Top Ranked Songs
+    Find songs that have ranked in the top position. 
+    Output the track name and the number of times it ranked at the top. 
+    Sort your records by the number of times the song was in the top position in descending order.
+*/
+WITH top_songs AS (
+    SELECT  trackname,
+            MAX(position) OVER(PARTITION BY id)
+    FROM    spotify_worldwide_daily_song_ranking
+    WHERE   position = 1
+)
+SELECT  DISTINCT trackname,
+        COUNT(*) OVER(PARTITION BY trackname) n_times_at_top
+FROM    top_songs
+ORDER BY n_times_at_top DESC;
