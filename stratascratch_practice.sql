@@ -946,3 +946,24 @@ SELECT  DISTINCT trackname,
         COUNT(*) OVER(PARTITION BY trackname) n_times_at_top
 FROM    top_songs
 ORDER BY n_times_at_top DESC;
+
+/*
+    ID 9897     Highest Salary In Department
+    Find the employee with the highest salary per department.
+    Output the department name, employee's first name along with the corresponding salary.
+*/
+WITH max_salary_per_department_filt AS (
+    SELECT  DISTINCT department,
+            MAX(salary) OVER(PARTITION BY department) max_salary
+    FROM    employee
+)
+SELECT  department,
+        first_name,
+        salary
+FROM    employee
+WHERE   salary IN (SELECT max_salary FROM max_salary_per_department_filt);
+
+/* ID 10128    Count the number of movies that Abigail Breslin was nominated for an oscar. */
+SELECT  COUNT(*) OVER(PARTITION BY nominee)
+FROM    oscar_nominees
+WHERE   nominee = 'Abigail Breslin';
