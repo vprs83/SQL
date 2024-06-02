@@ -947,6 +947,11 @@ SELECT  DISTINCT trackname,
 FROM    top_songs
 ORDER BY n_times_at_top DESC;
 
+/*  ID 10128    Count the number of movies that Abigail Breslin was nominated for an oscar. */
+SELECT  COUNT(*) OVER(PARTITION BY nominee)
+FROM    oscar_nominees
+WHERE   nominee = 'Abigail Breslin';
+
 /*
     ID 9897     Highest Salary In Department
     Find the employee with the highest salary per department.
@@ -963,7 +968,85 @@ SELECT  department,
 FROM    employee
 WHERE   salary IN (SELECT max_salary FROM max_salary_per_department_filt);
 
-/* ID 10128    Count the number of movies that Abigail Breslin was nominated for an oscar. */
-SELECT  COUNT(*) OVER(PARTITION BY nominee)
-FROM    oscar_nominees
-WHERE   nominee = 'Abigail Breslin';
+/*
+    ID 9924
+    Find libraries who haven't provided the email address in circulation year 2016 
+    but their notice preference definition is set to email. Output the library code.
+*/
+SELECT  DISTINCT home_library_code
+FROM    library_usage
+WHERE   provided_email_address = FALSE AND
+        circulation_active_year = 2016 AND
+        notice_preference_definition = 'email';
+        
+/*
+    ID 9913     Order Details
+    Find order details made by Jill and Eva.
+    Consider the Jill and Eva as first names of customers.
+    Output the order date, details and cost along with the first name.
+    Order records based on the customer id in ascending order.
+*/
+SELECT  c.first_name,
+        o.order_date,
+        o.order_details,
+        o.total_order_cost
+FROM customers c
+LEFT JOIN orders o ON c.id = o.cust_id
+WHERE c.first_name IN ('Jill', 'Eva')
+ORDER BY c.id ASC;
+
+/*  ID 2005     Share of Active Users
+    Output share of US users that are active. Active users are the ones with an "open" status in the table. */
+WITH usa_users_filt AS (
+    SELECT  COUNT(DISTINCT user_id) n_total_usa_users,
+            COUNT(  CASE
+                        WHEN status = 'open' -- AND country = 'USA'
+                        THEN user_id
+                        ELSE NULL
+                    END
+                ) n_active_usa_users
+    FROM    fb_active_users
+    WHERE   country = 'USA'
+)
+SELECT  (n_active_usa_users / n_total_usa_users ::real)
+FROM    usa_users_filt;
+-- SELECT COUNT(DISTINCT user_id) FROM fb_active_users;    -- 23
+-- SELECT COUNT(user_id) FROM fb_active_users;             -- 23
+
+/*  ID 2024     Unique Users Per Client Per Month
+    Write a query that returns the number of unique users per client per month  */
+SELECT  DISTINCT client_id,
+        EXTRACT(MONTH FROM time_id) AS month,
+        COUNT(DISTINCT user_id) user_num
+FROM    fact_events
+GROUP BY    client_id,
+            EXTRACT(MONTH FROM time_id)
+ORDER BY    month, 
+            client_id;
+-- SELECT COUNT(DISTINCT user_id) FROM fact_events;    -- 20
+-- SELECT COUNT(user_id) FROM fact_events;             -- 150
+
+/*  ID 9781     Find the rate of processed tickets for each type. */
+WITH tickets_processed_filt AS (
+    SELECT  DISTINCT type,
+            processed,
+            COUNT(complaint_id) OVER(PARTITION BY type, processed)  n_processed_tickets,
+            COUNT(complaint_id) OVER(PARTITION BY type) n_tickets
+    FROM    facebook_complaints
+    ORDER BY type
+)
+SELECT  type,
+        (n_processed_tickets / n_tickets ::real) rate
+FROM    tickets_processed_filt
+WHERE   processed = TRUE;
+
+/*  ID 9610     Find students with a median writing score
+    Output ids of students with a median score from the writing SAT.    */
+WITH median_writing_score_find AS (
+    -- to find median calculate 50th percentile
+    SELECT PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY sat_writing) median
+    FROM sat_scores
+)
+SELECT student_id
+FROM sat_scores
+WHERE sat_writing = (SELECT median FROM median_writing_score_find);
