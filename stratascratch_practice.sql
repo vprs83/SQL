@@ -1086,6 +1086,37 @@ ORDER BY n_of_occurrences DESC;
     pclass = 3: third_class
     Output the number of survivors and non-survivors by each class.
 */
+
+/*  Not accepted solution
+
+    pclass	survivors	non_survivors
+      1	        10	         11
+      2	        12            6
+      3	        19	         42
+*/
+SELECT  DISTINCT pclass,
+        COUNT(  
+                CASE    
+                    WHEN survived = 1
+                    THEN 1
+                    ELSE NULL
+                END
+            ) OVER(PARTITION BY pclass) survivors,
+        COUNT(  
+                CASE
+                    WHEN survived = 0
+                    THEN 1
+                    ELSE NULL
+                END
+            ) OVER(PARTITION BY pclass) non_survivors
+FROM titanic;
+
+/*  Accepted solution
+    
+    survived	first_class	    second_class	third_class
+        0	        11	            6	            42
+        1	        10	            12	            19
+*/
 SELECT  survived,
         SUM(CASE 
                 WHEN pclass = 1 
@@ -1107,3 +1138,77 @@ SELECT  survived,
             ) third_class
 FROM titanic
 GROUP BY survived;
+
+/*
+    ID 2119     Most Lucrative Products
+    You have been asked to find the 5 most lucrative products in terms of total revenue for the first half of 2022 (from January to June inclusive).
+    Output their IDs and the total revenue.
+*/
+SELECT  DISTINCT product_id,
+        SUM(cost_in_dollars * units_sold) OVER(PARTITION BY product_id) total_revenue
+FROM online_orders
+ORDER BY total_revenue DESC
+LIMIT 5;
+
+/*
+    ID 9688     Churro Activity Date
+    Find the activity date and the pe_description of facilities with the name 'STREET CHURROS' and with a score of less than 95 points.
+*/
+SELECT  activity_date,
+        pe_description
+FROM    los_angeles_restaurant_health_inspections
+WHERE   facility_name = 'STREET CHURROS' AND
+        score < 95;
+
+/*
+    ID 9728     Number of violations
+    You're given a dataset of health inspections. 
+    Count the number of violation in an inspection in 'Roxanne Cafe' for each year. 
+    If an inspection resulted in a violation, there will be a value in the 'violation_id' column. 
+    Output the number of violations by year in ascending order.
+*/
+SELECT  DISTINCT EXTRACT(YEAR FROM inspection_date) AS year,
+        COUNT(*) OVER(PARTITION BY EXTRACT(YEAR FROM inspection_date))
+FROM    sf_restaurant_health_violations
+WHERE   violation_id IS NOT NULL 
+        AND business_name = 'Roxanne Cafe';
+
+/*
+    ID 2102     Flags per Video
+    For each video, find how many unique users flagged it. 
+    A unique user can be identified using the combination of their first name and last name. 
+    Do not consider rows in which there is no flag ID.
+*/
+-- Solution 1. Using CASE
+SELECT  video_id,
+        COUNT(DISTINCT CASE
+                            WHEN user_firstname IS NULL
+                            THEN user_lastname
+                            WHEN user_lastname IS NULL
+                            THEN user_firstname
+                            ELSE user_firstname || user_lastname
+                        END)
+FROM    user_flags
+WHERE   flag_id IS NOT NULL
+GROUP BY video_id;
+
+-- Solution 2 (from question hints). Using COALESCE
+SELECT  video_id,
+        COUNT(DISTINCT COALESCE(user_firstname, '') || COALESCE(user_lastname, '')) 
+FROM    user_flags
+WHERE   flag_id IS NOT NULL
+GROUP BY video_id;
+
+/*
+    ID 9650     Find the top 10 ranked songs in 2010
+    What were the top 10 ranked songs in 2010?
+    Output the rank, group name, and song name but do not show the same song twice.
+    Sort the result based on the year_rank in ascending order.
+*/
+SELECT  year_rank,
+        group_name,
+        song_name
+FROM billboard_top_100_year_end
+WHERE year = 2010
+GROUP BY year_rank, group_name, song_name
+ORDER BY 1 ASC LIMIT 10
