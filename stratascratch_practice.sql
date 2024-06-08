@@ -1212,3 +1212,85 @@ FROM billboard_top_100_year_end
 WHERE year = 2010
 GROUP BY year_rank, group_name, song_name
 ORDER BY 1 ASC LIMIT 10
+
+/*
+    ID 9622     Number Of Bathrooms And Bedrooms
+    Find the average number of bathrooms and bedrooms for each city’s property types. 
+    Output the result along with the city name and the property type.
+*/
+-- 1st solution
+SELECT  DISTINCT city,
+        property_type,
+        AVG(bathrooms) OVER w n_bathrooms_avg,
+        AVG(bedrooms) OVER w n_bedrooms_avg
+FROM    airbnb_search_details
+WINDOW  w AS (PARTITION BY city, property_type);
+
+-- 2nd solution
+SELECT  city,
+        property_type,
+        AVG(bathrooms) n_bathrooms_avg,
+        AVG(bedrooms) n_bedrooms_avg
+FROM    airbnb_search_details
+GROUP BY city,
+        property_type;
+        
+/*
+    ID 9653
+    Count the number of user events performed by MacBookPro users.
+    Output the result along with the event name.
+    Sort the result based on the event count in the descending order.
+*/
+SELECT  event_name,
+        COUNT(event_name) event_count
+FROM playbook_events
+WHERE device LIKE '%macbook%pro%'
+GROUP BY event_name
+ORDER BY event_count DESC;
+
+/*
+    ID 2099     Election Results
+    The election is conducted in a city and everyone can vote for one or more candidates, or choose not to vote at all. 
+    Each person has 1 vote so if they vote for multiple candidates, their vote gets equally split across these candidates. 
+    For example, if a person votes for 2 candidates, these candidates receive an equivalent of 0.5 vote each.
+    Find out who got the most votes and won the election. Output the name of the candidate or multiple names in case of a tie. 
+    To avoid issues with a floating-point error you can round the number of votes received by a candidate to 3 decimal places.
+*/
+WITH 
+    votes_per_voter AS (
+        SELECT  voter,
+                COUNT(*) OVER(PARTITION BY voter) votes_given,
+                candidate
+        FROM    voting_results
+    ),
+    add_vote_weight AS (
+        SELECT  voter,
+                votes_given,
+                candidate,
+                CASE
+                    WHEN votes_given > 1
+                    THEN 1 / votes_given :: real
+                    ELSE 1
+                END vote_weight
+        FROM votes_per_voter
+    ),
+    votes_per_candidate AS (
+        SELECT  DISTINCT candidate,
+        SUM(vote_weight) OVER(PARTITION BY candidate) sum_of_votes
+        FROM add_vote_weight
+        WHERE candidate IS NOT NULL
+        ORDER BY sum_of_votes DESC
+    )
+SELECT  candidate
+FROM    votes_per_candidate
+LIMIT 1;
+
+/*  
+    ID 9972
+    Find the base pay for Police Captains.
+    Output the employee name along with the corresponding base pay.
+*/
+SELECT  employeename,
+        basepay
+FROM    sf_public_salaries
+WHERE   jobtitle LIKE '%CAPTAIN%POLICE%'; -- CAPTAIN III (POLICE DEPARTMENT)
