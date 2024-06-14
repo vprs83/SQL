@@ -1294,3 +1294,23 @@ SELECT  employeename,
         basepay
 FROM    sf_public_salaries
 WHERE   jobtitle LIKE '%CAPTAIN%POLICE%'; -- CAPTAIN III (POLICE DEPARTMENT)
+
+/*
+    ID 9917     Average Salaries
+    Compare each employee's salary with the average salary of the corresponding department.
+    Output the department, first name, and salary of employees along with the average salary of that department.
+*/
+SELECT  department,
+        first_name,
+        salary,
+        AVG(salary) OVER(PARTITION BY department)
+FROM employee;
+
+/*
+    ID 2056     Number of Shipments Per Month
+    Write a query that will calculate the number of shipments per month. 
+    The unique key for one shipment is a combination of shipment_id and sub_id. Output the year_month in format YYYY-MM and the number of shipments in that month.
+*/
+SELECT  DISTINCT EXTRACT(YEAR FROM shipment_date) || '-' || EXTRACT(MONTH FROM shipment_date) year_month,
+        COUNT(CONCAT(shipment_id, sub_id)) OVER(PARTITION BY EXTRACT(MONTH FROM shipment_date)) n_shipments
+FROM    amazon_shipment;
