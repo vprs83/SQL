@@ -1314,3 +1314,54 @@ FROM employee;
 SELECT  DISTINCT EXTRACT(YEAR FROM shipment_date) || '-' || EXTRACT(MONTH FROM shipment_date) year_month,
         COUNT(CONCAT(shipment_id, sub_id)) OVER(PARTITION BY EXTRACT(MONTH FROM shipment_date)) n_shipments
 FROM    amazon_shipment;
+
+/*
+    ID 2029     The Most Popular Client_Id Among Users Using Video and Voice Calls
+    Select the most popular client_id based on a count of the number of users who have at least 50% of their events from the following list: 'video call received', 'video call sent', 'voice call received', 'voice call sent'.
+*/
+WITH 
+    event_type_per_client_id_count AS (
+        SELECT  DISTINCT user_id,
+                client_id,
+                event_type,
+                COUNT(event_type) OVER(PARTITION BY client_id, event_type, user_id) n_event_type_per_client_id_per_user_id,
+                COUNT(event_type) OVER(PARTITION BY user_id) event_type_sum_per_user_id
+        FROM fact_events
+        --ORDER BY user_id, event_type
+    ),
+    searched_event_share_per_user_id_calc AS (
+        SELECT  user_id,
+                client_id,
+                SUM( CASE
+                        WHEN event_type IN ('video call received', 'video call sent', 'voice call received', 'voice call sent')
+                        THEN n_event_type_per_client_id_per_user_id
+                        ELSE NULL
+                    END ) / event_type_sum_per_user_id AS result
+        FROM event_type_per_client_id_count
+        GROUP BY user_id, client_id, event_type_sum_per_user_id
+        --ORDER BY user_id
+    ),
+    n_users_meeting_condition_calc AS (
+        SELECT  client_id, 
+                COUNT(CASE WHEN result >= 0.5 THEN 1 ELSE NULL END) n_users
+        FROM    searched_event_share_per_user_id_calc
+        GROUP BY client_id
+    )
+SELECT client_id
+FROM n_users_meeting_condition_calc
+WHERE n_users = (SELECT MAX(n_users) FROM n_users_meeting_condition_calc);
+
+/*
+    ID 9891     Customer Details
+    Find the details of each customer regardless of whether the customer made an order. 
+    Output the customer's first name, last name, and the city along with the order details.
+    Sort records based on the customer's first name and the order details in ascending order.
+*/
+SELECT      first_name,
+            last_name,
+            city,
+            order_details
+FROM        customers c
+LEFT JOIN   orders o ON c.id = o.cust_id
+ORDER BY    first_name, 
+            order_details ASC;
